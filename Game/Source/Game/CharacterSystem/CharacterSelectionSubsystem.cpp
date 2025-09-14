@@ -6,6 +6,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/GameModeBase.h"
+#include "GameFramework/Character.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Game/Combat/CharacterCombatComponent.h"
 
 static const FString SaveSlotName = TEXT("CharacterSelection");
 static const uint32 SaveUserIndex = 0;
@@ -63,6 +69,16 @@ void UCharacterSelectionSubsystem::SelectCharacterById(const FString& PrimaryAss
 	}
 }
 
+void UCharacterSelectionSubsystem::GetAllCharacterIds(TArray<FString>& OutIds) const
+{
+	OutIds.Reset();
+	OutIds.Reserve(CachedCharacterAssetIds.Num());
+	for (const FPrimaryAssetId& Id : CachedCharacterAssetIds)
+	{
+		OutIds.Add(Id.ToString());
+	}
+}
+
 /*
  * @brief : 저장된 선택 복원
  * @details : SaveGame → 실패 시 설정의 기본 캐릭터로 폴백
@@ -79,9 +95,26 @@ void UCharacterSelectionSubsystem::LoadSavedSelection()
 	}
 
 	const UCharacterSystemSettings* Settings = GetDefault<UCharacterSystemSettings>();
-	if (Settings && Settings->DefaultCharacter.IsValid())
+	if (Settings)
 	{
-		SelectCharacterById(Settings->DefaultCharacter.ToSoftObjectPath().GetAssetPathString());
+		const FSoftObjectPath SoftPath = Settings->DefaultCharacter.ToSoftObjectPath();
+		if (SoftPath.IsValid())
+		{
+			UAssetManager& AM = UAssetManager::Get();
+			const FPrimaryAssetId DefaultId = AM.GetPrimaryAssetIdForPath(SoftPath);
+			if (DefaultId.IsValid())
+			{
+				SelectCharacterById(DefaultId.ToString());
+				return;
+			}
+			// 직접 로드 후 선택 적용
+			Streamable.RequestSyncLoad(SoftPath);
+			if (UCharacterDefinition* Def = Cast<UCharacterDefinition>(SoftPath.ResolveObject()))
+			{
+				SelectedCharacter = Def;
+				OnCharacterSelected.Broadcast(Def);
+			}
+		}
 	}
 }
 
@@ -95,6 +128,78 @@ void UCharacterSelectionSubsystem::SaveSelection(const FPrimaryAssetId& AssetId)
 	if (!Save) return;
 	Save->SelectedCharacterId = AssetId.ToString();
 	UGameplayStatics::SaveGameToSlot(Save, SaveSlotName, SaveUserIndex);
+}
+
+static void ApplyCombatSpecIfAny(APawn* Pawn, const UCharacterDefinition* Def)
+{
+	if (!Pawn || !Def) return;
+	if (UCharacterCombatComponent* Combat = Pawn->FindComponentByClass<UCharacterCombatComponent>())
+	{
+		// Fill basic fields via component API for future extension
+		Combat->ApplyCombatSpec(Def);
+	}
+}
+
+static void ApplyCharacterSpec(APawn* Pawn, const UCharacterDefinition* Def)
+{
+	if (!Pawn || !Def) return;
+
+	ACharacter* Character = Cast<ACharacter>(Pawn);
+	USkeletalMeshComponent* MeshComp = Character ? Character->GetMesh() : nullptr;
+
+	// Mesh/Anim 교체 (가능한 경우)
+	if (MeshComp)
+	{
+		if (Def->Mesh.IsValid())
+		{
+			USkeletalMesh* Mesh = Def->Mesh.LoadSynchronous();
+			if (Mesh)
+			{
+				MeshComp->SetSkeletalMesh(Mesh);
+			}
+		}
+		if (Def->AnimClass.IsValid())
+		{
+			UClass* AnimCls = Def->AnimClass.LoadSynchronous();
+			if (AnimCls)
+			{
+				MeshComp->SetAnimInstanceClass(AnimCls);
+			}
+		}
+
+		// 상대 트랜스폼 적용
+		MeshComp->SetRelativeLocation(Def->MeshRelativeLocation);
+		MeshComp->SetRelativeRotation(Def->MeshRelativeRotation);
+		MeshComp->SetRelativeScale3D(Def->MeshRelativeScale3D);
+	}
+
+	// 캡슐 사이즈
+	if (Character && Character->GetCapsuleComponent())
+	{
+		Character->GetCapsuleComponent()->InitCapsuleSize(Def->CapsuleRadius, Def->CapsuleHalfHeight);
+	}
+
+	// 이동 스펙
+	if (Character && Character->GetCharacterMovement())
+	{
+		Character->GetCharacterMovement()->MaxWalkSpeed = Def->MaxWalkSpeed;
+		Character->GetCharacterMovement()->JumpZVelocity = Def->JumpZVelocity;
+		Character->GetCharacterMovement()->bOrientRotationToMovement = Def->bOrientRotationToMovement;
+	}
+
+	// 카메라 붐 길이 (선택)
+	if (Def->CameraBoomArmLength > 0.f && Character)
+	{
+		TArray<USpringArmComponent*> Arms;
+		Character->GetComponents(Arms);
+		for (USpringArmComponent* Arm : Arms)
+		{
+			Arm->TargetArmLength = Def->CameraBoomArmLength;
+		}
+	}
+
+	// 전투 스펙 적용
+	ApplyCombatSpecIfAny(Pawn, Def);
 }
 
 /*
@@ -122,9 +227,10 @@ APawn* UCharacterSelectionSubsystem::SpawnOrSwapPlayer(UWorld* World, AControlle
 		}
 	}
 
-	// 클래스가 동일하면 스왑 불필요
-	if (OldPawn && PawnClass && OldPawn->IsA(PawnClass))
+	// 클래스가 동일하고 스펙만 바꾸면 되는 경우: 동적 적용 후 반환
+	if (OldPawn && (!PawnClass || OldPawn->IsA(PawnClass)))
 	{
+		ApplyCharacterSpec(OldPawn, Def);
 		return OldPawn;
 	}
 
@@ -154,6 +260,7 @@ APawn* UCharacterSelectionSubsystem::SpawnOrSwapPlayer(UWorld* World, AControlle
 	if (NewPawn)
 	{
 		Controller->Possess(NewPawn);
+		ApplyCharacterSpec(NewPawn, Def);
 	}
 	return NewPawn ? NewPawn : OldPawn;
 }

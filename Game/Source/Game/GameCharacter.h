@@ -12,6 +12,8 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
+class UCharacterCombatComponent;
+class UAbilityComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -44,6 +46,16 @@ class AGameCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	/** Zoom Input (optional direct) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ZoomWheelAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ZoomDragAction;
+
+	/** Sprint Input (optional direct) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SprintAction;
+
 public:
 	AGameCharacter();
 	
@@ -62,6 +74,49 @@ protected:
 	virtual void NotifyControllerChanged() override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void Tick(float DeltaSeconds) override;
+
+	// Zoom controls
+	void OnZoomWheel(const FInputActionValue& Value);
+	void OnZoomDragStart(const FInputActionValue& Value);
+	void OnZoomDrag(const FInputActionValue& Value);
+	void OnZoomDragEnd(const FInputActionValue& Value);
+
+	// Dash controls
+	void OnDashPressed();
+	void OnDashReleased();
+
+protected:
+	/** Combat Component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	UCharacterCombatComponent* CombatComponent;
+
+	/** Ability Component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Ability, meta = (AllowPrivateAccess = "true"))
+	UAbilityComponent* AbilityComponent;
+
+	// Zoom config
+	UPROPERTY(EditAnywhere, Category=Camera)
+	float ZoomSpeed = 50.f;
+	UPROPERTY(EditAnywhere, Category=Camera)
+	float ZoomMin = 200.f;
+	UPROPERTY(EditAnywhere, Category=Camera)
+	float ZoomMax = 800.f;
+	bool bZoomDragging = false;
+	FVector2D ZoomDragPrev = FVector2D::ZeroVector;
+
+	// Dash config
+	UPROPERTY(EditAnywhere, Category=Movement)
+	float SprintMultiplier = 1.8f;
+	float BaseWalkSpeed = 500.f;
+	bool bDashing = false;
+
+	// Restart-on-fall config
+	UPROPERTY(EditAnywhere, Category=Gameplay)
+	bool bAutoRestartOnFall = true;
+	UPROPERTY(EditAnywhere, Category=Gameplay)
+	float RestartZThreshold = -500.f;
+	bool bPendingRestart = false;
 
 public:
 	/** Returns CameraBoom subobject **/

@@ -5,6 +5,7 @@
 #include "CharacterSystemSettings.generated.h"
 
 class UCharacterDefinition;
+class UCharacterInputConfig;
 
 /*
  * @brief : 캐릭터 시스템 프로젝트 설정
@@ -31,6 +32,10 @@ public:
 	/** PrimaryDataAsset 스캔 경로 (Content 루트 기준) */
 	UPROPERTY(EditAnywhere, Config, Category = "Asset Scan", meta=(Tooltip="캐릭터 정의 에셋을 검색할 경로 목록"))
 	TArray<FDirectoryPath> CharacterAssetDirectories;
+
+	/** 입력 매핑 데이터 (선택) */
+	UPROPERTY(EditAnywhere, Config, Category = "Input", meta=(Tooltip="캐릭터 입력 매핑 데이터(PrimaryDataAsset)"))
+	TSoftObjectPtr<UCharacterInputConfig> DefaultInputConfig;
 };
 
 

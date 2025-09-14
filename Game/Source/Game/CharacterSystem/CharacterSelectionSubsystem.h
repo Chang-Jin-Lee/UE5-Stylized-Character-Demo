@@ -32,6 +32,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Character")
 	void SelectCharacterById(const FString& PrimaryAssetIdString);
 
+	// 모든 캐릭터 PrimaryAssetId 문자열 나열
+	UFUNCTION(BlueprintCallable, Category="Character")
+	void GetAllCharacterIds(UPARAM(ref) TArray<FString>& OutIds) const;
+
 	// 현재 선택된 정의 반환
 	UFUNCTION(BlueprintPure, Category="Character")
 	UCharacterDefinition* GetSelectedCharacter() const { return SelectedCharacter.Get(); }
