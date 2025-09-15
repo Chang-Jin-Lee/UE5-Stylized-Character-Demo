@@ -26,7 +26,25 @@ https://www.youtube.com/watch?v=dnhVrL-So_Q
 - UI는 Slate UI를 사용해 구현
 -  (DataAsset + 서브시스템 + 컴포넌트)와 입력/전투/AI/툴 파이프라인 구현
 
-### 핵심 시스템 요약
+### 키 입력
+- 캐릭터 선택(콘솔)
+  - `CharList` → 등록된 캐릭터 정의 나열
+  - `CharSelect CharacterDef:AssetName` → 선택 및 즉시 스폰/스왑
+- 기본 조작/단축키(변경 가능)
+  - 공격/스킬: 마우스 왼쪽클릭, 숫자 1번
+  - 카메라 줌: 휠/드래그
+  - 상호작용: F (NPC 전방 트레이스)
+  - 인벤토리: I (토글)
+  - 커서/UI 모드: Ctrl 홀드
+  - 스프린트: Shift 
+
+### 기술 요약
+- 데이터 주도(PrimaryDataAsset/DeveloperSettings): C++ 재컴파일 없이 신규 캐릭터/입력/능력치 확대
+- 서브시스템(GameInstanceSubsystem): 캐릭터 선택 상태 유지(맵 전환 간 일관성)
+- Enhanced Input: 에셋 기반 액션/키 매핑 + 런타임 IMC로 안전하게 합치는 구조(타이밍 이슈 방지)
+- 애님 노티파이 + 입력 큐: 연타/콤보 안정성, 실시간 반응성 강화
+
+### 시스템 요약
 - DataAsset 기반 캐릭터 시스템
   - `UCharacterDefinition`(PrimaryDataAsset): 메쉬/애님/캡슐/이동/카메라/전투(콤보·스킬·사운드·트레이스·데미지) 정의
   - `UCharacterSystemSettings`(DeveloperSettings): 기본 캐릭터/에셋 스캔 경로/기본 입력 설정
@@ -60,24 +78,6 @@ https://www.youtube.com/watch?v=dnhVrL-So_Q
   - Ctrl 홀드: 마우스 커서 표시 + UI 입력 전환
   - Shift 스프린트: `MaxWalkSpeed` 배속 증가(액션 방식으로 바인딩)
   - 낙사 처리: Z < -500 시 현재 레벨 재시작
-
-### 사용 방법
-- 캐릭터 선택(콘솔)
-  - `CharList` → 등록된 캐릭터 정의 나열
-  - `CharSelect CharacterDef:AssetName` → 선택 및 즉시 스폰/스왑
-- 기본 조작/단축키(변경 가능)
-  - 공격/스킬: 마우스 왼쪽클릭, 숫자 1번
-  - 카메라 줌: 휠/드래그
-  - 상호작용: F (NPC 전방 트레이스)
-  - 인벤토리: I (토글)
-  - 커서/UI 모드: Ctrl 홀드
-  - 스프린트: Shift 
-
-### 기술스택 요약
-- 데이터 주도(PrimaryDataAsset/DeveloperSettings): C++ 재컴파일 없이 신규 캐릭터/입력/능력치 확대
-- 서브시스템(GameInstanceSubsystem): 캐릭터 선택 상태 유지(맵 전환 간 일관성)
-- Enhanced Input: 에셋 기반 액션/키 매핑 + 런타임 IMC로 안전하게 합치는 구조(타이밍 이슈 방지)
-- 애님 노티파이 + 입력 큐: 연타/콤보 안정성, 실시간 반응성 강화
 
 ### 디렉터리
 - `Source/Game/CharacterSystem/` … Definition/Settings/Save/SelectionSubsystem
