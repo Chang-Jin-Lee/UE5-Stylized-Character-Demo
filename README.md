@@ -1,6 +1,17 @@
 # UE5-Stylized-Character-Demo
 
-https://www.youtube.com/watch?v=dnhVrL-So_Q
+### 프로젝트 개요
+- 목표 : 블루아카이브 하나코의 캐릭터 시스템 및 콤보 시스템 구현
+- Unreal Engine 5.5 C++ 기반 데모 게임 프로젝트
+- Slate UI를 사용해 UI 구현
+-  (DataAsset + 서브시스템 + 컴포넌트)와 입력/전투/AI/툴 파이프라인 구현
+
+- 영상
+  https://www.youtube.com/watch?v=dnhVrL-So_Q
+
+<img width="1227" height="1080" alt="1스크린샷 2025-09-15 061607 - 복사본" src="https://github.com/user-attachments/assets/627f3a0b-dbfc-4723-861e-b211d27498b4" />
+
+### Cel Shading 적용
 
 <table>
   <tr>
@@ -19,12 +30,6 @@ https://www.youtube.com/watch?v=dnhVrL-So_Q
   </tr>
 </table>
 
-
-### 프로젝트 개요
-- 목표 : 블루아카이브 하나코의 캐릭터 시스템 및 콤보 시스템 구현
-- Unreal Engine 5.5 C++ 기반 샘플 게임 프로젝트
-- UI는 Slate UI를 사용해 구현
--  (DataAsset + 서브시스템 + 컴포넌트)와 입력/전투/AI/툴 파이프라인 구현
 
 ### 키 입력
 - 캐릭터 선택(콘솔)
